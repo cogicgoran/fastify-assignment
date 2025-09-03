@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify";
 import {
   createUser,
+  getAuthenticatedUser,
   loginUser,
   logout,
   logoutAll,
@@ -49,5 +50,14 @@ export const usersRoute = async (fastify: FastifyInstance) => {
       schema: {},
     },
     logoutAll
+  );
+
+  fastify.get(
+    "/me",
+    {
+      preHandler: [fastify.authenticate],
+      schema: {},
+    },
+    getAuthenticatedUser
   );
 };

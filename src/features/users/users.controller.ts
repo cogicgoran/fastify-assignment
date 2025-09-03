@@ -9,7 +9,7 @@ import {
   SESSION_REFRESH_TOKEN_DURATION,
 } from "@utils/common";
 import { userRepository } from "./users.repository";
-import { refreshTokenSchema } from "@database/schema";
+import { refreshTokenSchema, userSchema } from "@database/schema";
 import { eq } from "drizzle-orm";
 
 export const createUser = async (
@@ -50,7 +50,7 @@ export const loginUser = async (
     if (verifyPassword(databaseUser.password, hashData))
       throw new BadRequestError("Bad password or email");
     // create access token, refresh token, update database with new refresh token, set cookies
-    const tokenPayload = { email: user.email, id: databaseUser.id };
+    const tokenPayload = { email: user.email, userId: databaseUser.id };
     const accessToken = fastify.jwt.sign(
       { ...tokenPayload },
       {
@@ -99,29 +99,31 @@ export const loginUser = async (
 };
 
 export const refreshToken = async (
-  request: FastifyRequest<{
-    Body: { email: string; password: string };
-  }>,
+  request: FastifyRequest,
   reply: FastifyReply
 ) => {
   const token = request.cookies["refresh_token"];
   if (!token) throw new BadRequestError("Invalid refresh token");
   const [activeTokenUser] = await fastify.db
-    .select({ userId: refreshTokenSchema.userId, id: refreshTokenSchema.id })
+    .select({
+      userId: refreshTokenSchema.userId,
+      id: refreshTokenSchema.id,
+      email: userSchema.email,
+    })
     .from(refreshTokenSchema)
+    .innerJoin(userSchema, eq(refreshTokenSchema.userId, userSchema.id))
     .where(eq(refreshTokenSchema.token, token));
   if (!activeTokenUser)
     throw new BadRequestError("Invalid refresh token[User not found]");
-  const tokenPayload = fastify.jwt.verify<{ id: number; email: string }>(token);
   // TODO: check expiration and all that just in case
   const accessToken = fastify.jwt.sign(
-    { email: tokenPayload.email, id: tokenPayload.id },
+    { email: activeTokenUser.email, userId: activeTokenUser.userId },
     {
       expiresIn: ACCESS_TOKEN_DURATION,
     }
   );
   const newRefreshToken = fastify.jwt.sign(
-    { email: tokenPayload.email, id: tokenPayload.id },
+    { email: activeTokenUser.email, userId: activeTokenUser.userId },
     {
       expiresIn: REFRESH_TOKEN_DURATION,
     }
@@ -148,19 +150,14 @@ export const refreshToken = async (
     .send({
       success: true,
       data: {
-        id: tokenPayload.id,
-        email: tokenPayload.email,
+        id: activeTokenUser.id,
+        email: activeTokenUser.email,
         accessToken: accessToken,
       },
     });
 };
 
-export const logout = async (
-  request: FastifyRequest<{
-    Body: { email: string; password: string };
-  }>,
-  reply: FastifyReply
-) => {
+export const logout = async (request: FastifyRequest, reply: FastifyReply) => {
   const refreshToken = request.cookies["refresh_token"];
   if (!refreshToken) throw new BadRequestError("Invalid refresh token");
   await fastify.userRepository.logout(refreshToken);
@@ -186,9 +183,7 @@ export const logout = async (
 };
 
 export const logoutAll = async (
-  request: FastifyRequest<{
-    Body: { email: string; password: string };
-  }>,
+  request: FastifyRequest,
   reply: FastifyReply
 ) => {
   await fastify.userRepository.logoutAll(request.user.id);
@@ -211,4 +206,14 @@ export const logoutAll = async (
     .send({
       success: true,
     });
+};
+
+export const getAuthenticatedUser = async (
+  request: FastifyRequest,
+  reply: FastifyReply
+) => {
+  // Emails is already found inside of the token, no need to send request to database(even though we could)
+  reply.status(200).send({
+    email: request.user.email,
+  });
 };
