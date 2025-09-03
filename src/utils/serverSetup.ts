@@ -1,11 +1,31 @@
-import Fastify from 'fastify';
+import Fastify from "fastify";
+import { userRepository } from "@src/features/users/users.repository";
+import { usersRoute } from "@src/features/users/users.routes";
+import { Exception } from "./exceptions";
 
 export const createFastifyInstance = () => {
-    const fastify = Fastify({
-        logger: true,
-    });
-    
-    global.fastify = fastify;
+  const fastify = Fastify({
+    logger: true,
+  });
+
+  global.fastify = fastify;
 };
 
+export function registerRoutes (){
+    fastify.register(usersRoute, { prefix: '/users' });
+}
 
+export function registerRepositories (){
+    fastify.decorate("userRepository", userRepository);
+}
+
+export function registerErrorHandling() {
+  fastify.setErrorHandler((error, _, reply) => {
+    if (error instanceof Exception) {
+        return reply
+            .code((error as Exception).code) // TODO: fix this later
+            .send({message:(error as Exception).message});
+    }
+    return reply.code(500).send({ message: error.message });
+});
+}
