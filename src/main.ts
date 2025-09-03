@@ -1,14 +1,9 @@
-import Fastify from 'fastify';
+import { createFastifyInstance } from "@utils/serverSetup";
+import { registerDatabase } from "./database";
+import { config } from "dotenv";
+config();
 
 const API_PORT = 3000;
-
-const createFastifyInstance = () => {
-    const fastify = Fastify({
-        logger: true,
-    });
-    
-    global.fastify = fastify;
-};
 
 const main = async () => {
     try {
@@ -22,4 +17,5 @@ const main = async () => {
 };
 
 createFastifyInstance();
+registerDatabase()
 main();
