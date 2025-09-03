@@ -1,21 +1,19 @@
 import { BadRequestError } from "@utils/exceptions";
 import { FastifyReply, FastifyRequest } from "fastify";
+import { hashPassword } from "@utils/string";
 
 const ERROR_CODE_DUPLICATE_KEY = '23505';
 
 export const createUser = async (
     request: FastifyRequest<{
-        // Body: CreateUserSchema;
+        Body: {email: string, password: string};
     }>,
     reply: FastifyReply
 ) => {
     try {
         const user = request.body;
-        // const { email } = user;
-        // const fastify = request.server;
-        // const userResponse = await fastify.userRepository.getUserByEmail(
-        //     user.email
-        // );
+        const hashData = hashPassword(user.password);
+        user.password = hashData.hash;
         const createdUserId = await fastify.userRepository.createUser(user);
         return reply.code(201).send({ id: createdUserId });
 
