@@ -1,11 +1,20 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyInstance } from 'fastify';
 import { IUserRepository } from './features/users/users.repository';
+import * as schema from '@database/schema';
+import { JWT } from '@fastify/jwt';
+
+
+declare module '@fastify/jwt' {
+    interface FastifyJWT {
+        user: any;
+    }
+}
 
 declare module 'fastify' {
-    // interface FastifyRequest {
-    //     jwt: JWT;
-    // }
+    interface FastifyRequest {
+        jwt: JWT;
+    }
     interface FastifyInstance {
         db: PostgresJsDatabase<typeof schema>;
         userRepository: IUserRepository;

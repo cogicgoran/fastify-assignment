@@ -1,4 +1,4 @@
-import { createFastifyInstance, registerErrorHandling, registerRepositories, registerRoutes } from "@utils/serverSetup";
+import { createFastifyInstance, registerErrorHandling, registerJwt, registerRepositories, registerRoutes } from "@utils/serverSetup";
 import { registerDatabase } from "./database";
 import { config } from "dotenv";
 config();
@@ -19,6 +19,7 @@ const main = async () => {
 };
 
 createFastifyInstance();
+registerJwt();
 registerDatabase()
 registerRepositories()
 registerRoutes()

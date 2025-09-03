@@ -5,6 +5,7 @@
   "main": "main.js",
   "scripts": {
     "dev": "tsx watch src/main.ts",
+    "build": "rimraf dist && tsc -p tsconfig.json",
     "create-migration": "drizzle-kit generate --config src/database/drizzle.config.ts --name"
   },
   "keywords": [],
@@ -12,6 +13,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/jwt": "^10.0.0",
     "dotenv": "^17.2.2",
     "drizzle-orm": "^0.44.5",
     "fastify": "^5.5.0",
