@@ -46,34 +46,45 @@ export type ValidStatusCode =
   | 511;
 
 export abstract class Exception extends Error {
-    code: ValidStatusCode;
+  statusCode: ValidStatusCode;
 
-    protected constructor(message: string, code: ValidStatusCode) {
-        super(message);
-        this.name = this.constructor.name;
-        this.code = code;
-        Error.captureStackTrace(this, this.constructor);
-    }
+  protected constructor(message: string, code: ValidStatusCode) {
+    super(message);
+    this.name = this.constructor.name;
+    this.statusCode = code;
+    Error.captureStackTrace(this, this.constructor);
+  }
 }
 
 export class BadRequestError extends Exception {
   statusCode: ValidStatusCode;
   type: string;
-  constructor(message: string = 'Bad Request') {
+  constructor(message: string = "Bad Request") {
     super(message, 400);
-    this.name = 'BadRequestError';
+    this.name = "BadRequestError";
     this.statusCode = 400;
-    this.type = 'bad_request';
+    this.type = "bad_request";
   }
 }
 
 export class InternalServerError extends Exception {
   statusCode: ValidStatusCode;
   type: string;
-  constructor(message: string = 'Internal Server Error') {
+  constructor(message: string = "Internal Server Error") {
     super(message, 500);
-    this.name = 'InternalServerError';
+    this.name = "InternalServerError";
     this.statusCode = 400;
-    this.type = 'internal_server_error';
+    this.type = "internal_server_error";
+  }
+}
+
+export class UnauthorizedError extends Exception {
+  statusCode: ValidStatusCode;
+  type: string;
+  constructor(message: string = "Unauthorized") {
+    super(message, 401);
+    this.name = "UnauthorizedError";
+    this.statusCode = 401;
+    this.type = "unauthorized";
   }
 }

@@ -5,8 +5,12 @@ import {
   ACCESS_TOKEN_DURATION,
   ERROR_CODE_DUPLICATE_KEY,
   REFRESH_TOKEN_DURATION,
+  SESSION_ACCESS_TOKEN_DURATION,
+  SESSION_REFRESH_TOKEN_DURATION,
 } from "@utils/common";
 import { userRepository } from "./users.repository";
+import { refreshTokenSchema } from "@database/schema";
+import { eq } from "drizzle-orm";
 
 export const createUser = async (
   request: FastifyRequest<{
@@ -43,25 +47,38 @@ export const loginUser = async (
       user.email
     );
     if (!databaseUser) throw new BadRequestError("User does not exist");
-    if (verifyPassword(databaseUser.password,hashData))
+    if (verifyPassword(databaseUser.password, hashData))
       throw new BadRequestError("Bad password or email");
     // create access token, refresh token, update database with new refresh token, set cookies
     const tokenPayload = { email: user.email, id: databaseUser.id };
-    const accessToken = fastify.jwt.sign(tokenPayload, {
-      expiresIn: ACCESS_TOKEN_DURATION,
-    });
-    const refreshToken = fastify.jwt.sign(tokenPayload, {
-      expiresIn: REFRESH_TOKEN_DURATION,
-    });
+    const accessToken = fastify.jwt.sign(
+      { ...tokenPayload },
+      {
+        expiresIn: ACCESS_TOKEN_DURATION,
+      }
+    );
+    const refreshToken = fastify.jwt.sign(
+      { ...tokenPayload },
+      {
+        expiresIn: REFRESH_TOKEN_DURATION,
+      }
+    );
     await userRepository.addRefreshToken(databaseUser.id, refreshToken);
 
     reply
+      .setCookie("access_token", accessToken, {
+        path: "/",
+        httpOnly: true,
+        sameSite: "none",
+        secure: false,
+        expires: new Date(Date.now() + SESSION_ACCESS_TOKEN_DURATION),
+      })
       .setCookie("refresh_token", refreshToken, {
         path: "/",
         httpOnly: true,
         sameSite: "none",
-        secure: true,
-        expires: new Date(Date.now() + 8 * 60 * 60 * 1000),
+        secure: false,
+        expires: new Date(Date.now() + SESSION_REFRESH_TOKEN_DURATION),
       })
       .status(200)
       .send({
@@ -79,4 +96,119 @@ export const loginUser = async (
     // const errorMessage = `User registration failed.`;
     // handleException(e, errorMessage, reply);
   }
+};
+
+export const refreshToken = async (
+  request: FastifyRequest<{
+    Body: { email: string; password: string };
+  }>,
+  reply: FastifyReply
+) => {
+  const token = request.cookies["refresh_token"];
+  if (!token) throw new BadRequestError("Invalid refresh token");
+  const [activeTokenUser] = await fastify.db
+    .select({ userId: refreshTokenSchema.userId, id: refreshTokenSchema.id })
+    .from(refreshTokenSchema)
+    .where(eq(refreshTokenSchema.token, token));
+  if (!activeTokenUser)
+    throw new BadRequestError("Invalid refresh token[User not found]");
+  const tokenPayload = fastify.jwt.verify<{ id: number; email: string }>(token);
+  // TODO: check expiration and all that just in case
+  const accessToken = fastify.jwt.sign(
+    { email: tokenPayload.email, id: tokenPayload.id },
+    {
+      expiresIn: ACCESS_TOKEN_DURATION,
+    }
+  );
+  const newRefreshToken = fastify.jwt.sign(
+    { email: tokenPayload.email, id: tokenPayload.id },
+    {
+      expiresIn: REFRESH_TOKEN_DURATION,
+    }
+  );
+
+  await userRepository.replaceRefreshToken(activeTokenUser.id, newRefreshToken);
+
+  reply
+    .setCookie("access_token", accessToken, {
+      path: "/",
+      httpOnly: true,
+      sameSite: "none",
+      secure: false,
+      expires: new Date(Date.now() + SESSION_ACCESS_TOKEN_DURATION),
+    })
+    .setCookie("refresh_token", newRefreshToken, {
+      path: "/",
+      httpOnly: true,
+      sameSite: "none",
+      secure: false,
+      expires: new Date(Date.now() + SESSION_REFRESH_TOKEN_DURATION),
+    })
+    .status(200)
+    .send({
+      success: true,
+      data: {
+        id: tokenPayload.id,
+        email: tokenPayload.email,
+        accessToken: accessToken,
+      },
+    });
+};
+
+export const logout = async (
+  request: FastifyRequest<{
+    Body: { email: string; password: string };
+  }>,
+  reply: FastifyReply
+) => {
+  const refreshToken = request.cookies["refresh_token"];
+  if (!refreshToken) throw new BadRequestError("Invalid refresh token");
+  await fastify.userRepository.logout(refreshToken);
+  reply
+    .setCookie("access_token", "", {
+      path: "/",
+      httpOnly: true,
+      sameSite: "none",
+      secure: false,
+      expires: new Date(Date.now()),
+    })
+    .setCookie("refresh_token", "", {
+      path: "/",
+      httpOnly: true,
+      sameSite: "none",
+      secure: false,
+      expires: new Date(Date.now()),
+    })
+    .status(200)
+    .send({
+      success: true,
+    });
+};
+
+export const logoutAll = async (
+  request: FastifyRequest<{
+    Body: { email: string; password: string };
+  }>,
+  reply: FastifyReply
+) => {
+  await fastify.userRepository.logoutAll(request.user.id);
+  reply
+    .setCookie("access_token", "", {
+      path: "/",
+      httpOnly: true,
+      sameSite: "none",
+      secure: false,
+      expires: new Date(Date.now()),
+    })
+    .setCookie("refresh_token", "", {
+      path: "/",
+      httpOnly: true,
+      sameSite: "none",
+      secure: false,
+      expires: new Date(Date.now()),
+    })
+    .status(200)
+    .send({
+      success: true,
+    });
 };
