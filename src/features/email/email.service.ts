@@ -1,11 +1,12 @@
-import { config } from "dotenv";
 import Mailjet from "node-mailjet";
-config(); // TODO: not sure why this file gets executed before main???
 
-const mailjet = new Mailjet({
-  apiKey: process.env.MJ_APIKEY_PUBLIC,
-  apiSecret: process.env.MJ_APIKEY_PRIVATE,
-});
+export function registerMailService() {
+  const mailjet = new Mailjet({
+    apiKey: process.env.MJ_APIKEY_PUBLIC,
+    apiSecret: process.env.MJ_APIKEY_PRIVATE,
+  });
+  fastify.decorate("mailjet", mailjet);
+}
 
 export const sendMail = async (
   to: string,
@@ -14,7 +15,7 @@ export const sendMail = async (
   html: string
 ) => {
   try {
-    await mailjet.post("send", { version: "v3.1" }).request({
+    await fastify.mailjet.post("send", { version: "v3.1" }).request({
       Messages: [
         {
           From: {

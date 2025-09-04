@@ -2,6 +2,7 @@ import { defineConfig } from 'drizzle-kit';
 import { config } from 'dotenv';
 
 config();
+console.log('IN DRIZZLE CONF')
 
 export const dbCredentials = {
     user: process.env.DB_USER,

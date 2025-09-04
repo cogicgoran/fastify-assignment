@@ -11,7 +11,10 @@ export interface IUserRepository {
   createUser: (body: UserRegisterSchema, token: string) => Promise<number>;
   getUserByEmail: (
     email: string
-  ) => Promise<{ id: number; email: string; password: string } | undefined>;
+  ) => Promise<
+    | { id: number; email: string; password: string; isEmailVerified: boolean }
+    | undefined
+  >;
   addRefreshToken: (userId: number, refreshToken: string) => Promise<void>;
   replaceRefreshToken: (oldTokenId: number, newToken: string) => Promise<void>;
   logout: (refreshToken: string) => Promise<void>;
@@ -60,6 +63,7 @@ export const userRepository: IUserRepository = {
         id: userSchema.id,
         email: userSchema.email,
         password: userSchema.password,
+        isEmailVerified: userSchema.is_email_verified,
       })
       .from(userSchema)
       .where(eq(userSchema.email, email.toLowerCase()));

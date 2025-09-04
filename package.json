@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "build": "rimraf dist && tsc -p tsconfig.json",
+    "test": "vitest",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "create-migration": "drizzle-kit generate --config src/database/drizzle.config.ts --name"
   },
   "keywords": [],
@@ -30,6 +32,9 @@
   "devDependencies": {
     "@types/node": "^24.3.0",
     "@types/pg": "^8.15.5",
-    "drizzle-kit": "^0.31.4"
+    "@types/supertest": "^6.0.3",
+    "drizzle-kit": "^0.31.4",
+    "supertest": "^7.1.4",
+    "vitest": "^3.2.4"
   }
 }

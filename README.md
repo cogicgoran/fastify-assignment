@@ -12,7 +12,7 @@ Create endpoint for refreshing JWT token. -
 Create endpoint for logout (deletes the session/jwt token). -
 Create endpoint for removing all other sessions (like loggout all other sessions). -
 Create endpoint to return user info (GET /user/me, it can return his email). -
-Create simple e2e tests using Vitest (use mocking for email sending)
+Create simple e2e tests using Vitest (use mocking for email sending) -
 
 ## Requirements
 

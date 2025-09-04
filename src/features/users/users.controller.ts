@@ -67,6 +67,8 @@ export const loginUser = async (
   const hashData = hashPassword(user.password);
   const databaseUser = await fastify.userRepository.getUserByEmail(user.email);
   if (!databaseUser) throw new BadRequestError("User does not exist");
+  if (!databaseUser.isEmailVerified)
+    throw new BadRequestError("Email not verified");
   if (verifyPassword(databaseUser.password, hashData))
     throw new BadRequestError("Bad password or email");
   const tokenPayload = { email: user.email, userId: databaseUser.id };

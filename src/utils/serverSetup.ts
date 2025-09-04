@@ -7,7 +7,10 @@ import fastifyCookie from "@fastify/cookie";
 import fastifySwagger from "@fastify/swagger";
 import fastifySwaggerUi from "@fastify/swagger-ui";
 import { Value } from "@sinclair/typebox/value";
-import { AuthTokenPayloadUserSchema, authTokenPayloadUserSchema } from "@src/features/users/users.schema";
+import {
+  AuthTokenPayloadUserSchema,
+  authTokenPayloadUserSchema,
+} from "@src/features/users/users.schema";
 import { TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
 
 export const createFastifyInstance = () => {
@@ -52,13 +55,12 @@ export const authenticate = async (request: FastifyRequest) => {
   try {
     const accessToken = request.cookies.access_token;
     if (!accessToken) throw new UnauthorizedError();
-    const tokenPayload = fastify.jwt.verify<AuthTokenPayloadUserSchema>(
-      accessToken
-    );
+    const tokenPayload =
+      fastify.jwt.verify<AuthTokenPayloadUserSchema>(accessToken);
     Value.Assert(authTokenPayloadUserSchema, tokenPayload);
     request.user = { id: tokenPayload.userId, email: tokenPayload.email };
   } catch (e) {
-    console.log(e)
+    console.log(e);
     throw new UnauthorizedError();
   }
 };

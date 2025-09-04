@@ -3,6 +3,7 @@ import { FastifyInstance } from "fastify";
 import { IUserRepository } from "./features/users/users.repository";
 import * as schema from "@database/schema";
 import { JWT } from "@fastify/jwt";
+import Mailjet from "node-mailjet";
 
 declare module "@fastify/jwt" {
   interface FastifyJWT {
@@ -17,6 +18,7 @@ declare module "fastify" {
   interface FastifyInstance {
     db: PostgresJsDatabase<typeof schema>;
     userRepository: IUserRepository;
+    mailjet: Mailjet;
     authenticate: (
       request: FastifyRequest,
       reply: FastifyReply
