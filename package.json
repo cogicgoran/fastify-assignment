@@ -7,7 +7,6 @@
     "dev": "tsx watch src/main.ts",
     "build": "rimraf dist && tsc -p tsconfig.json",
     "test": "vitest",
-    "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "create-migration": "drizzle-kit generate --config src/database/drizzle.config.ts --name"
   },
   "keywords": [],
