@@ -24,8 +24,8 @@ export const createUser = async (
 ) => {
   try {
     const user = request.body;
-    const hashData = hashPassword(user.password);
-    user.password = hashData.hash;
+    const hashedPassword = await hashPassword(user.password);
+    user.password = hashedPassword;
     const token = fastify.jwt.sign({
       email: user.email,
       type: "email_verification",
@@ -64,13 +64,13 @@ export const loginUser = async (
   reply: FastifyReply
 ) => {
   const user = request.body;
-  const hashData = hashPassword(user.password);
   const databaseUser = await fastify.userRepository.getUserByEmail(user.email);
   if (!databaseUser) throw new BadRequestError("User does not exist");
   if (!databaseUser.isEmailVerified)
     throw new BadRequestError("Email not verified");
-  if (verifyPassword(databaseUser.password, hashData))
+  if (!(await verifyPassword(user.password, databaseUser.password))) {
     throw new BadRequestError("Bad password or email");
+  }
   const tokenPayload = { email: user.email, userId: databaseUser.id };
   const accessToken = fastify.jwt.sign(
     { ...tokenPayload },
