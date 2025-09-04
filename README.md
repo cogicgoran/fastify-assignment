@@ -14,9 +14,13 @@ Create endpoint for removing all other sessions (like loggout all other sessions
 Create endpoint to return user info (GET /user/me, it can return his email). -  
 Create simple e2e tests using Vitest (use mocking for email sending) -  
 
+## Requirements
+- Node  
+- Docker 
+
 ## Setup
-Run `npm install`  
-Run `docker compose up -d` 
+Run `npm install`, make sure you have correct node version
+Run `docker compose up -d`  
 Create `.env` file matching `.env.example` structure  
 Run `npm run dev` to spin up the server  
 You can interact with server on `http://localhost:3000/api/documentation`  
