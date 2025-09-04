@@ -10,8 +10,6 @@ const main = async () => {
     try {
         const port = Number(API_PORT);
         await fastify.listen({host: apiHost, port });
-        // await fastify.ready()
-        // fastify.swagger()
         console.log(`Server is running on port:${port}`);
         console.log(fastify.printRoutes())
     } catch (e) {

@@ -1,13 +1,7 @@
 import { config } from "dotenv";
 import Mailjet from "node-mailjet";
 config(); // TODO: not sure why this file gets executed before main???
-// const transporter = nodemailer.createTransport({
-//   service: 'gmail',
-//   auth: {
-//     user: process.env.GMAIL_EMAIL,
-//     pass: process.env.GMAIL_APP_KEY,
-//   },
-// });
+
 const mailjet = new Mailjet({
   apiKey: process.env.MJ_APIKEY_PUBLIC,
   apiSecret: process.env.MJ_APIKEY_PRIVATE,

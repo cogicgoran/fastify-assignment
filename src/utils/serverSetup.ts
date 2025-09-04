@@ -6,11 +6,14 @@ import fastifyJwt from "@fastify/jwt";
 import fastifyCookie from "@fastify/cookie";
 import fastifySwagger from "@fastify/swagger";
 import fastifySwaggerUi from "@fastify/swagger-ui";
+import { Value } from "@sinclair/typebox/value";
+import { AuthTokenPayloadUserSchema, authTokenPayloadUserSchema } from "@src/features/users/users.schema";
+import { TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
 
 export const createFastifyInstance = () => {
   const fastify = Fastify({
     logger: true,
-  });
+  }).withTypeProvider<TypeBoxTypeProvider>();
 
   global.fastify = fastify;
 };
@@ -25,6 +28,17 @@ export function registerRepositories() {
 
 export function registerErrorHandling() {
   fastify.setErrorHandler((error, _, reply) => {
+    if (error.validation) {
+      if (error.validation[0].instancePath === "/email") {
+        return reply
+          .status(400)
+          .send({ message: "Invalid email", type: "validation" });
+      }
+
+      return reply
+        .status(400)
+        .send({ message: error.message, type: "validation" });
+    }
     if (error instanceof Exception) {
       return reply
         .code((error as Exception).statusCode) // TODO: fix this later
@@ -38,12 +52,13 @@ export const authenticate = async (request: FastifyRequest) => {
   try {
     const accessToken = request.cookies.access_token;
     if (!accessToken) throw new UnauthorizedError();
-    const tokenPayload = fastify.jwt.verify<{ userId: number; email: string }>(
+    const tokenPayload = fastify.jwt.verify<AuthTokenPayloadUserSchema>(
       accessToken
     );
+    Value.Assert(authTokenPayloadUserSchema, tokenPayload);
     request.user = { id: tokenPayload.userId, email: tokenPayload.email };
   } catch (e) {
-    console.log(e);
+    console.log(e)
     throw new UnauthorizedError();
   }
 };

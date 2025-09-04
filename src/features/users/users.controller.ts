@@ -12,11 +12,14 @@ import { userRepository } from "./users.repository";
 import { refreshTokenSchema, userSchema } from "@database/schema";
 import { eq } from "drizzle-orm";
 import { sendMail } from "../email/email.service";
+import {
+  UserLoginSchema,
+  UserRegisterSchema,
+  UserVerificationSchema,
+} from "./users.schema";
 
 export const createUser = async (
-  request: FastifyRequest<{
-    Body: { email: string; password: string };
-  }>,
+  request: FastifyRequest<{ Body: UserRegisterSchema }>,
   reply: FastifyReply
 ) => {
   try {
@@ -43,9 +46,7 @@ export const createUser = async (
 };
 
 export const verifyEmail = async (
-  request: FastifyRequest<{
-    Body: { verificationToken: string };
-  }>,
+  request: FastifyRequest<{ Body: UserVerificationSchema }>,
   reply: FastifyReply
 ) => {
   const verificationToken = request.body.verificationToken;
@@ -59,68 +60,54 @@ export const verifyEmail = async (
 };
 
 export const loginUser = async (
-  request: FastifyRequest<{
-    Body: { email: string; password: string };
-  }>,
+  request: FastifyRequest<{ Body: UserLoginSchema }>,
   reply: FastifyReply
 ) => {
-  try {
-    const user = request.body;
-    const hashData = hashPassword(user.password);
-    // user.password = hashData.hash;
-    const databaseUser = await fastify.userRepository.getUserByEmail(
-      user.email
-    );
-    if (!databaseUser) throw new BadRequestError("User does not exist");
-    if (verifyPassword(databaseUser.password, hashData))
-      throw new BadRequestError("Bad password or email");
-    // create access token, refresh token, update database with new refresh token, set cookies
-    const tokenPayload = { email: user.email, userId: databaseUser.id };
-    const accessToken = fastify.jwt.sign(
-      { ...tokenPayload },
-      {
-        expiresIn: ACCESS_TOKEN_DURATION,
-      }
-    );
-    const refreshToken = fastify.jwt.sign(
-      { ...tokenPayload },
-      {
-        expiresIn: REFRESH_TOKEN_DURATION,
-      }
-    );
-    await userRepository.addRefreshToken(databaseUser.id, refreshToken);
+  const user = request.body;
+  const hashData = hashPassword(user.password);
+  const databaseUser = await fastify.userRepository.getUserByEmail(user.email);
+  if (!databaseUser) throw new BadRequestError("User does not exist");
+  if (verifyPassword(databaseUser.password, hashData))
+    throw new BadRequestError("Bad password or email");
+  const tokenPayload = { email: user.email, userId: databaseUser.id };
+  const accessToken = fastify.jwt.sign(
+    { ...tokenPayload },
+    {
+      expiresIn: ACCESS_TOKEN_DURATION,
+    }
+  );
+  const refreshToken = fastify.jwt.sign(
+    { ...tokenPayload },
+    {
+      expiresIn: REFRESH_TOKEN_DURATION,
+    }
+  );
+  await userRepository.addRefreshToken(databaseUser.id, refreshToken);
 
-    reply
-      .setCookie("access_token", accessToken, {
-        path: "/",
-        httpOnly: true,
-        sameSite: "none",
-        secure: true,
-        expires: new Date(Date.now() + SESSION_ACCESS_TOKEN_DURATION),
-      })
-      .setCookie("refresh_token", refreshToken, {
-        path: "/",
-        httpOnly: true,
-        sameSite: "none",
-        secure: true,
-        expires: new Date(Date.now() + SESSION_REFRESH_TOKEN_DURATION),
-      })
-      .status(200)
-      .send({
-        success: true,
-        data: {
-          id: databaseUser.id,
-          email: user.email,
-          accessToken: accessToken,
-        },
-      });
-  } catch (error) {
-    if ((error as any)?.cause.code === ERROR_CODE_DUPLICATE_KEY)
-      throw new BadRequestError("User already exists"); // TODO: check if db error
-    throw error;
-    // const errorMessage = `User registration failed.`;
-    // handleException(e, errorMessage, reply);
-  }
+  reply
+    .setCookie("access_token", accessToken, {
+      path: "/",
+      httpOnly: true,
+      sameSite: "none",
+      secure: true,
+      expires: new Date(Date.now() + SESSION_ACCESS_TOKEN_DURATION),
+    })
+    .setCookie("refresh_token", refreshToken, {
+      path: "/",
+      httpOnly: true,
+      sameSite: "none",
+      secure: true,
+      expires: new Date(Date.now() + SESSION_REFRESH_TOKEN_DURATION),
+    })
+    .status(200)
+    .send({
+      success: true,
+      data: {
+        id: databaseUser.id,
+        email: user.email,
+        accessToken: accessToken,
+      },
+    });
 };
 
 export const refreshToken = async (
