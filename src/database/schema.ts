@@ -46,3 +46,19 @@ export const refreshTokenSchema = pgTable(
     unique('refresh_token_key').on(t.token),
   ]
 );
+
+export const emailVerificatoinTokenSchema = pgTable(
+  'verification_token',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => userSchema.id, { onDelete: 'cascade' }),
+    token: varchar('token', { length: 512 }).notNull(),
+    valid: boolean().default(true).notNull()
+  },
+  (t) => [
+    index('verification_user_idx').on(t.userId),
+    unique('verification_token_key').on(t.token),
+  ]
+);

@@ -1,8 +1,13 @@
-import { refreshTokenSchema, userSchema } from "@database/schema";
-import { eq } from "drizzle-orm";
+import {
+  emailVerificatoinTokenSchema,
+  refreshTokenSchema,
+  userSchema,
+} from "@database/schema";
+import { BadRequestError } from "@utils/exceptions";
+import { and, eq } from "drizzle-orm";
 
 export interface IUserRepository {
-  createUser: (body: any) => Promise<number>;
+  createUser: (body: any, token: string) => Promise<number>;
   getUserByEmail: (
     email: string
   ) => Promise<{ id: number; email: string; password: string } | undefined>;
@@ -10,15 +15,43 @@ export interface IUserRepository {
   replaceRefreshToken: (oldTokenId: number, newToken: string) => Promise<void>;
   logout: (refreshToken: string) => Promise<void>;
   logoutAll: (userId: number) => Promise<void>;
+  updateVerificationEmailToken: (email: string, token: string) => Promise<any>;
 }
 
 export const userRepository: IUserRepository = {
-  async createUser(body) {
-    const [{ id: createdUserId }] = await fastify.db
-      .insert(userSchema)
-      .values(body)
-      .returning({ id: userSchema.id });
-    return createdUserId;
+  async updateVerificationEmailToken(email, token) {
+    return fastify.db.transaction(async (transaction) => {
+      const result = await transaction
+        .update(emailVerificatoinTokenSchema)
+        .set({
+          valid: false,
+        })
+        .where(
+          and(
+            eq(emailVerificatoinTokenSchema.token, token),
+            eq(emailVerificatoinTokenSchema.valid, true)
+          )
+        );
+      if(result.rowCount !== 1) throw new BadRequestError('Token not found')
+      await transaction
+        .update(userSchema)
+        .set({
+          is_email_verified: true,
+        })
+        .where(eq(userSchema.email, email));
+    });
+  },
+  async createUser(body, token) {
+    return await fastify.db.transaction(async (transaction) => {
+      const [{ id: createdUserId }] = await transaction
+        .insert(userSchema)
+        .values(body)
+        .returning({ id: userSchema.id });
+      await transaction
+        .insert(emailVerificatoinTokenSchema)
+        .values({ token: token, userId: createdUserId });
+      return createdUserId;
+    });
   },
   async getUserByEmail(email: string) {
     const [user] = await fastify.db

@@ -4,6 +4,8 @@ import { usersRoute } from "@src/features/users/users.routes";
 import { Exception, UnauthorizedError } from "./exceptions";
 import fastifyJwt from "@fastify/jwt";
 import fastifyCookie from "@fastify/cookie";
+import fastifySwagger from "@fastify/swagger";
+import fastifySwaggerUi from "@fastify/swagger-ui";
 
 export const createFastifyInstance = () => {
   const fastify = Fastify({
@@ -36,10 +38,10 @@ export const authenticate = async (request: FastifyRequest) => {
   try {
     const accessToken = request.cookies.access_token;
     if (!accessToken) throw new UnauthorizedError();
-    const tokenPayload = fastify.jwt.verify<{ id: number; email: string }>(
+    const tokenPayload = fastify.jwt.verify<{ userId: number; email: string }>(
       accessToken
     );
-    request.user = { id: tokenPayload.id, email: tokenPayload.email };
+    request.user = { id: tokenPayload.userId, email: tokenPayload.email };
   } catch (e) {
     console.log(e);
     throw new UnauthorizedError();
@@ -58,3 +60,30 @@ export function registerJwt() {
 
   fastify.decorate("authenticate", authenticate);
 }
+
+export const registerDocumentation = () => {
+  const swaggerOptions = {
+    openapi: {
+      openapi: "3.0.0",
+      info: {
+        title: "My API",
+        description: "API documentation",
+        version: "1.0.0",
+      },
+      servers: [
+        {
+          url: "http://localhost:3000",
+          description: "Development server",
+        },
+      ],
+    },
+  };
+
+  const swaggerUiOptions = {
+    routePrefix: `/api/documentation`,
+    exposeRoute: true,
+  };
+
+  fastify.register(fastifySwagger, swaggerOptions);
+  fastify.register(fastifySwaggerUi, swaggerUiOptions);
+};

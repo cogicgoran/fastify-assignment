@@ -11,6 +11,7 @@ import {
 import { userRepository } from "./users.repository";
 import { refreshTokenSchema, userSchema } from "@database/schema";
 import { eq } from "drizzle-orm";
+import { sendMail } from "../email/email.service";
 
 export const createUser = async (
   request: FastifyRequest<{
@@ -22,15 +23,39 @@ export const createUser = async (
     const user = request.body;
     const hashData = hashPassword(user.password);
     user.password = hashData.hash;
-    const createdUserId = await fastify.userRepository.createUser(user);
+    const token = fastify.jwt.sign({
+      email: user.email,
+      type: "email_verification",
+    });
+    const createdUserId = await fastify.userRepository.createUser(user, token);
+    sendMail(
+      request.body.email,
+      "Registration",
+      "This is reg",
+      `<p>Test email, here is the token: ${token}<p>`
+    );
     return reply.code(201).send({ id: createdUserId });
   } catch (error) {
-    if ((error as any)?.cause.code === ERROR_CODE_DUPLICATE_KEY)
+    if ((error as any)?.cause?.code === ERROR_CODE_DUPLICATE_KEY)
       throw new BadRequestError("User already exists"); // TODO: check if db error
     throw error;
-    // const errorMessage = `User registration failed.`;
-    // handleException(e, errorMessage, reply);
   }
+};
+
+export const verifyEmail = async (
+  request: FastifyRequest<{
+    Body: { verificationToken: string };
+  }>,
+  reply: FastifyReply
+) => {
+  const verificationToken = request.body.verificationToken;
+  const decodedToken = fastify.jwt.verify<{ email: string }>(verificationToken); //TODO: validate
+  const createdUserId =
+    await fastify.userRepository.updateVerificationEmailToken(
+      decodedToken.email,
+      verificationToken
+    );
+  return reply.code(201).send({ id: createdUserId });
 };
 
 export const loginUser = async (
@@ -70,14 +95,14 @@ export const loginUser = async (
         path: "/",
         httpOnly: true,
         sameSite: "none",
-        secure: false,
+        secure: true,
         expires: new Date(Date.now() + SESSION_ACCESS_TOKEN_DURATION),
       })
       .setCookie("refresh_token", refreshToken, {
         path: "/",
         httpOnly: true,
         sameSite: "none",
-        secure: false,
+        secure: true,
         expires: new Date(Date.now() + SESSION_REFRESH_TOKEN_DURATION),
       })
       .status(200)
@@ -136,14 +161,14 @@ export const refreshToken = async (
       path: "/",
       httpOnly: true,
       sameSite: "none",
-      secure: false,
+      secure: true,
       expires: new Date(Date.now() + SESSION_ACCESS_TOKEN_DURATION),
     })
     .setCookie("refresh_token", newRefreshToken, {
       path: "/",
       httpOnly: true,
       sameSite: "none",
-      secure: false,
+      secure: true,
       expires: new Date(Date.now() + SESSION_REFRESH_TOKEN_DURATION),
     })
     .status(200)
@@ -166,14 +191,14 @@ export const logout = async (request: FastifyRequest, reply: FastifyReply) => {
       path: "/",
       httpOnly: true,
       sameSite: "none",
-      secure: false,
+      secure: true,
       expires: new Date(Date.now()),
     })
     .setCookie("refresh_token", "", {
       path: "/",
       httpOnly: true,
       sameSite: "none",
-      secure: false,
+      secure: true,
       expires: new Date(Date.now()),
     })
     .status(200)
@@ -192,14 +217,14 @@ export const logoutAll = async (
       path: "/",
       httpOnly: true,
       sameSite: "none",
-      secure: false,
+      secure: true,
       expires: new Date(Date.now()),
     })
     .setCookie("refresh_token", "", {
       path: "/",
       httpOnly: true,
       sameSite: "none",
-      secure: false,
+      secure: true,
       expires: new Date(Date.now()),
     })
     .status(200)

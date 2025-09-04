@@ -8,6 +8,13 @@
       "when": 1756914391830,
       "tag": "0000_InitialMigration",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1756938719293,
+      "tag": "0001_EmailVerification",
+      "breakpoints": true
     }
   ]
 }
