@@ -2,6 +2,7 @@ import { Pool } from "pg";
 import * as schema from "./schema";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
+import * as path from 'node:path';
 
 export const registerDatabase = async () => {
   const pool = new Pool({
@@ -15,8 +16,13 @@ export const registerDatabase = async () => {
   fastify.decorate("db", db);
 
   try {
+    const migrationsPath = path.resolve(
+      process.cwd(),
+      "src/database/migrations"
+    );
+
     await migrate(db, {
-      migrationsFolder: "./src/database/migrations",
+      migrationsFolder: migrationsPath,
     });
   } catch (error) {
     console.log(error);

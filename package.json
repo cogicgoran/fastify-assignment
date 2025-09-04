@@ -3,6 +3,9 @@
   "type": "module",
   "version": "1.0.0",
   "main": "main.js",
+  "engines": {
+    "node": "22.19.0"
+  },
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "build": "rimraf dist && tsc -p tsconfig.json",
