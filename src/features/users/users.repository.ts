@@ -5,9 +5,10 @@ import {
 } from "@database/schema";
 import { BadRequestError } from "@utils/exceptions";
 import { and, eq } from "drizzle-orm";
+import { UserRegisterSchema } from "./users.schema";
 
 export interface IUserRepository {
-  createUser: (body: any, token: string) => Promise<number>;
+  createUser: (body: UserRegisterSchema, token: string) => Promise<number>;
   getUserByEmail: (
     email: string
   ) => Promise<{ id: number; email: string; password: string } | undefined>;
@@ -32,20 +33,20 @@ export const userRepository: IUserRepository = {
             eq(emailVerificatoinTokenSchema.valid, true)
           )
         );
-      if(result.rowCount !== 1) throw new BadRequestError('Token not found')
+      if (result.rowCount !== 1) throw new BadRequestError("Token not found");
       await transaction
         .update(userSchema)
         .set({
           is_email_verified: true,
         })
-        .where(eq(userSchema.email, email));
+        .where(eq(userSchema.email, email.toLowerCase()));
     });
   },
   async createUser(body, token) {
     return await fastify.db.transaction(async (transaction) => {
       const [{ id: createdUserId }] = await transaction
         .insert(userSchema)
-        .values(body)
+        .values({ ...body, email: body.email.toLowerCase() })
         .returning({ id: userSchema.id });
       await transaction
         .insert(emailVerificatoinTokenSchema)
@@ -61,7 +62,7 @@ export const userRepository: IUserRepository = {
         password: userSchema.password,
       })
       .from(userSchema)
-      .where(eq(userSchema.email, email));
+      .where(eq(userSchema.email, email.toLowerCase()));
     return user;
   },
   addRefreshToken(userId, token) {
